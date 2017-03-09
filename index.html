@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Test</title>
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+</head>
+<style>
+	body{
+		margin-top: 30px;
+	}
+
+	#messageFormArea{
+		display: none;
+	}
+</style>
+<body>
+	<div class="container">
+		<div id="userFormArea" class="row">
+			<div class="col-md-12">
+				<form id="userForm">
+					<div class="form-group">
+						<label>Enter Username</label>
+						<input type="text" class="form-control" id="username" />
+						<br />
+						<input type="submit" class="btn btn-primary" value="Login" />
+					</div>
+				</form>
+			</div>
+		</div>
+		<div class="row" id="messageFormArea">
+			<div class="col-md-4">
+				<div class="well">
+					<h3>Online Users</h3>
+					<ul class="list-group" id="users"></ul>
+				</div>
+			</div>
+			<div class="col-md-8">
+				<div class="chat" id="chat"></div>
+				<form id="messageForm">
+					<div class="form-group">
+						<label>Enter a message</label>
+						<textarea class="form-control" id="message"></textarea>
+						<br />
+						<input type="submit" class="btn btn-primary" value="Send Message" />
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+
+<!-- Chat form to All Sockets -->
+<div id="incoming-chat-window"></div>
+<form id="outgoing-chat-form">
+	<input size="50" type="text" id="outgoing-chat-field" />
+	<input type="submit" />
+</form>
+<!-- End -->
+
+<!-- Chat Form to Beta Room -->
+<p>To beta Room</p>
+<div id="incoming-chat-window2"></div>
+<form id="outgoing-chat-form2">
+	<input size="50" type="text" id="outgoing-chat-field2" />
+	<input type="submit" />
+</form>
+<!-- End -->
+
+<!-- Join 'Beta' Room -->
+<button id='room'>Join Room</button>
+<!-- End -->
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+
+<script>
+
+	$(document).ready(function(){
+
+		// Initially connect to the socket server
+		var socket = io.connect('http://localhost:3000');
+
+		var $messageFormArea = $('#messageFormArea');
+		var $userFormArea = $('#userFormArea');
+		var $messageForm = $('#messageForm');
+		var $userForm = $('#userForm');
+		var $message = $('#message');
+		var $chat = $('#chat');
+		var $username = $('#username');
+		var $users = $('#users');
+
+		$messageForm.submit(function(e){
+			e.preventDefault();
+			socket.emit('send message', $message.val());
+			$message.val('');
+		});
+
+
+		$userFormArea.submit(function(e){
+			e.preventDefault();
+			socket.emit('new user', $username.val(), function(data){
+				if(data){
+					$userFormArea.hide();
+					$messageFormArea.show();
+				}
+			});
+			$username.val('');
+		});
+
+		socket.on('new message', function(data){
+	  		$chat.append('<div class="well"><strong>' + data.user + ':</strong>' + ' ' + data.msg + '</div>');
+	  	});
+
+	  	socket.on('get users', function(data){
+	  		var html = '';
+	  		for(i = 0; i < data.length; i++){
+	  			html += '<li class="list-group-item">' + data[i] + '</li>';
+	  		}
+	  		$users.html(html);
+	  	});
+
+
+
+
+		// Default Room
+		$('#outgoing-chat-form').submit(function(e){
+			e.preventDefault();
+			socket.emit('send message', $('#outgoing-chat-field').val());
+			$('#outgoing-chat-field').val('');
+		});
+
+		// Beta Room
+		$('#outgoing-chat-form2').submit(function(e){
+			e.preventDefault();
+			socket.emit('send message2', $('#outgoing-chat-field2').val());
+			$('#outgoing-chat-field2').val('');
+		});
+
+		// Listen for an event called news
+		socket.on('news', function (data) {
+	    	$('#incoming-chat-window').append(data + '<br />');
+	  	});
+
+	  	$('#room').click(function(e){
+	  		e.preventDefault();
+	  		var data = {
+	  			room: 'beta'
+	  		};
+	  		socket.emit('subscribe', data);
+	  	});
+
+	});
+</script>
+</body>
+</html>
